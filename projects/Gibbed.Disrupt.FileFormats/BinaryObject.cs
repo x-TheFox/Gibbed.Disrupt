@@ -141,7 +141,7 @@ namespace Gibbed.Disrupt.FileFormats
             List<BinaryObject> pointers,
             Endian endian)
         {
-            //pointers.Add(this);
+            pointers.Add(this);
             totalObjectCount += (uint)this.Children.Count;
             totalValueCount += (uint)this._Fields.Count;
 
@@ -228,17 +228,24 @@ namespace Gibbed.Disrupt.FileFormats
                 {
                     int childOffset = GetChildOffset(pointers, child);
                     if (childOffset == -1)
-                        pointers.Add(child);
+                    {
+                        child.Serialize(
+                            output,
+                            ref totalObjectCount,
+                            ref totalValueCount,
+                            pointers, endian);
+                    }
                     else
+                    {
                         Console.WriteLine("GetChildOffset: " + childOffset);
-                    output.WriteValueU8(0xFE);
-                    // Need to write the number of bytes between
-                    uint offset = (uint)(childOffset);
-                    output.WriteValueU32(offset);
+                        output.WriteValueU8(0xFE);
+                        // Need to write the number of bytes between
+                        uint offset = (uint)(childOffset);
+                        output.WriteValueU32(offset);
+                    }
                 }
                 else
                 {
-                    pointers.Add(child);
                     child.Serialize(
                         output,
                         ref totalObjectCount,
@@ -262,7 +269,7 @@ namespace Gibbed.Disrupt.FileFormats
 
             if (count == 0xFE)
             {
-                Console.WriteLine("Pointer");
+                //Console.WriteLine("Pointer");
             }
 
             var childCount = ReadCount(input, out var isOffset, endian);
