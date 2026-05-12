@@ -117,6 +117,17 @@ namespace Gibbed.Disrupt.FileFormats
             }
             return true;
         }
+
+        public override int GetHashCode()
+        {
+            int hash = 17;
+            hash = hash * 31 + NameHash.GetHashCode();
+            foreach (var kv in Fields)
+            {
+                hash = hash * 31 + kv.Key.GetHashCode();
+            }
+            return hash;
+        }
         #endregion
 
         // Get the offset of the current node if it matches one of the previous children

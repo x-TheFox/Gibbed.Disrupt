@@ -1,0 +1,68 @@
+name: Build & Release
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Setup .NET SDK
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '8.0.x'
+
+    - name: Install .NET Framework 4.7.2 Targeting Pack
+      run: |
+        choco install netfx-4.7.2-devpack -y
+
+    - name: Restore NuGet packages
+      run: dotnet restore Disrupt.sln
+
+    - name: Build solution (Release)
+      run: dotnet build Disrupt.sln -c Release --no-restore
+
+    - name: Publish built artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: Gibbed.Disrupt-Release-${{ github.sha }}
+        path: |
+          projects/*/bin/Release/**/*.exe
+          projects/*/bin/Release/**/*.dll
+        if-no-files-found: error
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+
+    steps:
+    - name: Download build artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: release-artifacts
+
+    - name: Create release package
+      run: |
+        mkdir -p staging
+        find release-artifacts -type f \( -name "*.exe" -o -name "*.dll" \) | while read f; do
+          cp "$f" staging/
+        done
+        cd staging
+        zip -r ../Gibbed.Disrupt-latest.zip .
+        cd ..
+
+    - name: Upload release package artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: Gibbed.Disrupt-Release-Package
+        path: Gibbed.Disrupt-latest.zip
