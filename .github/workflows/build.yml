@@ -38,6 +38,7 @@ jobs:
         path: |
           projects/*/bin/Release/**/*.exe
           projects/*/bin/Release/**/*.dll
+          bin/projects/**
         if-no-files-found: error
 
   release:
@@ -46,7 +47,7 @@ jobs:
     # Only run this job on pushes to main/master, not pull requests
     if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
     permissions:
-      contents: write # Crucial for creating releases
+      contents: write
 
     steps:
     - name: Download build artifacts
@@ -57,9 +58,13 @@ jobs:
 
     - name: Create release package
       run: |
-        mkdir -p staging
-        # Flatten directory structure for the zip
-        find raw-artifacts -type f \( -name "*.exe" -o -name "*.dll" \) -exec cp {} staging/ \;
+        mkdir -p staging/bin/projects
+        # Copy all built executables and DLLs into bin/
+        find raw-artifacts/projects -type f \( -name "*.exe" -o -name "*.dll" \) -exec cp {} staging/bin/ \;
+        # Copy the projects folder (XML configs + file lists) alongside the binaries
+        # This is required for the tools to resolve file names from hashes at runtime
+        cp -r raw-artifacts/bin/projects/* staging/bin/projects/
+
         cd staging
         zip -r ../Gibbed.Disrupt-latest.zip .
         cd ..
@@ -72,7 +77,10 @@ jobs:
         name: Release v1.0.${{ github.run_number }}
         body: |
           Automated release for commit ${{ github.sha }}.
-          Check the build logs for more details.
+
+          **Contents:**
+          - `bin/` — All built executables and libraries
+          - `bin/projects/` — Project configurations and file lists (required for hash name resolution)
         draft: false
         prerelease: false
       env:

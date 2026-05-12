@@ -106,6 +106,11 @@ namespace Gibbed.Disrupt.Packing
             int? version = null;
             var platform = Big.Platform.Win64;
 
+            // Default version depends on archive type:
+            // BigFileV3 (Watch Dogs 1) uses version 8
+            // BigFileV5 (Watch Dogs 2 / Legion) uses version 11
+            int defaultVersion = typeof(TArchive) == typeof(BigFileV3) ? 8 : 11;
+
             var options = new OptionSet()
             {
                 { "v|verbose", "be verbose", v => verbose = v != null },
@@ -170,7 +175,7 @@ namespace Gibbed.Disrupt.Packing
 
             var fat = new TArchive()
             {
-                Version = version.Value,
+                Version = version ?? defaultVersion,
                 Platform = platform,
                 CompressionVersion = GetCompressionVersionForPlatform(platform),
                 NameHashVersion = GetNameHashVersionForPlatform(platform),
