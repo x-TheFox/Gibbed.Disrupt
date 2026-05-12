@@ -43,26 +43,37 @@ jobs:
   release:
     needs: build
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+    # Only run this job on pushes to main/master, not pull requests
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+    permissions:
+      contents: write # Crucial for creating releases
 
     steps:
     - name: Download build artifacts
       uses: actions/download-artifact@v4
       with:
-        path: release-artifacts
+        name: Gibbed.Disrupt-Release-${{ github.sha }}
+        path: raw-artifacts
 
     - name: Create release package
       run: |
         mkdir -p staging
-        find release-artifacts -type f \( -name "*.exe" -o -name "*.dll" \) | while read f; do
-          cp "$f" staging/
-        done
+        # Flatten directory structure for the zip
+        find raw-artifacts -type f \( -name "*.exe" -o -name "*.dll" \) -exec cp {} staging/ \;
         cd staging
         zip -r ../Gibbed.Disrupt-latest.zip .
         cd ..
 
-    - name: Upload release package artifact
-      uses: actions/upload-artifact@v4
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v2
       with:
-        name: Gibbed.Disrupt-Release-Package
-        path: Gibbed.Disrupt-latest.zip
+        files: Gibbed.Disrupt-latest.zip
+        tag_name: v1.0.${{ github.run_number }}
+        name: Release v1.0.${{ github.run_number }}
+        body: |
+          Automated release for commit ${{ github.sha }}.
+          Check the build logs for more details.
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
